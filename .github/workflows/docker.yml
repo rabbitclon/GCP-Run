@@ -29,4 +29,6 @@ jobs:
           context: .
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: rabbitclon/gcp-run:latest
+          tags: |
+            rabbitclon/gcp-run:latest
+            rabbitclon/gcp-run:v2
