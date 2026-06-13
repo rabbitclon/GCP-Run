@@ -8,6 +8,16 @@ import (
  "time"
 )
 
+const bufferSize = 64 * 1024
+
+func tuneTCP(c net.Conn) {
+ if tcp, ok := c.(*net.TCPConn); ok {
+  _ = tcp.SetNoDelay(true)
+  _ = tcp.SetKeepAlive(true)
+  _ = tcp.SetKeepAlivePeriod(30 * time.Second)
+ }
+}
+
 func closeWrite(c net.Conn) {
  if tcp, ok := c.(*net.TCPConn); ok {
   _ = tcp.CloseWrite()
@@ -16,11 +26,19 @@ func closeWrite(c net.Conn) {
  }
 }
 
+func copyData(dst net.Conn, src net.Conn, done chan<- struct{}) {
+ buf := make([]byte, bufferSize)
+ _, _ = io.CopyBuffer(dst, src, buf)
+ closeWrite(dst)
+ done <- struct{}{}
+}
+
 func proxy(client net.Conn, target string) {
  defer client.Close()
+ tuneTCP(client)
 
  dialer := net.Dialer{
-  Timeout:   10 * time.Second,
+  Timeout:   5 * time.Second,
   KeepAlive: 30 * time.Second,
  }
 
@@ -30,20 +48,12 @@ func proxy(client net.Conn, target string) {
   return
  }
  defer remote.Close()
+ tuneTCP(remote)
 
  done := make(chan struct{}, 2)
 
- go func() {
-  _, _ = io.Copy(remote, client)
-  closeWrite(remote)
-  done <- struct{}{}
- }()
-
- go func() {
-  _, _ = io.Copy(client, remote)
-  closeWrite(client)
-  done <- struct{}{}
- }()
+ go copyData(remote, client, done)
+ go copyData(client, remote, done)
 
  <-done
 }
