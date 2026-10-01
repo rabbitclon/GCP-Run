@@ -56,6 +56,7 @@ func proxy(client net.Conn, target string) {
  go copyData(client, remote, done)
 
  <-done
+ <-done
 }
 
 func main() {
@@ -64,9 +65,9 @@ func main() {
   port = "8080"
  }
 
- ip := os.Getenv("V2RAY_SERVER_IP")
+ ip := os.Getenv("SERVER_IP")
  if ip == "" {
-  log.Fatal("V2RAY_SERVER_IP is empty")
+  log.Fatal("SERVER_IP is empty")
  }
 
  targetPort := os.Getenv("TARGET_PORT")
